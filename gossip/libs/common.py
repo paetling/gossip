@@ -1,7 +1,10 @@
+import os
 from .constants import CONFIG_FILE
 import yaml
 
 def load_membership():
+    if not os.path.isfile(CONFIG_FILE):
+        return ''
     with open(CONFIG_FILE, 'r') as f:
         contents = f.read()
         return yaml.load(contents)

@@ -14,22 +14,25 @@ class ListeningServer(object):
         s = socket.socket()
         s.bind((self.address, self.port))
         s.listen()
-        logging.info("Listening on {}".format((self.address, self.port)))
+        logging.error("Listening on {}".format((self.address, self.port)))
         while True:
             from_conn, from_address = s.accept()
+            logging.error("Got a connection")
             while True:
-                data = from_conn.recv(4096)
-                logging.info("GOT DATA")
-                logging.info(data)
+                data = from_conn.recv(4096).decode('utf-8')
+                logging.error("GOT DATA")
+                logging.error(data)
                 if data == STRING_TERMINATOR:
                     break
                 if MEMBERSHIP_STRING in data:
-                    final_data = yaml.load(data[len(MEMBERSHIP_STRING):])
+                    final_data = yaml.load(data.replace(MEMBERSHIP_STRING, ''))
                     self.update_membership(final_data)
 
     def update_membership(self, new_membership_dict):
+        logging.error("Updating Membership")
         current_membership_dict = load_membership()
         merged_membership_dict = self.merge_membership_dicts(current_membership_dict, new_membership_dict)
+        logging.error("New Membership is {}".format(merged_membership_dict))
         save_membership(merged_membership_dict)
 
     def merge_membership_dicts(self, current_membership_dict, new_membership_dict):
