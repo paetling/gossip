@@ -1,0 +1,3 @@
+#!/bin/bash
+sed -i "s|MY_ADDRESS|$MY_ADDRESS|" "initial_config"
+sed -i "s|MY_PORT|$MY_PORT|" "initial_config"

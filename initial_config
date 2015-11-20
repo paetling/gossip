@@ -1,0 +1,7 @@
+members:
+    - address: gossip1
+      port: 80
+      heartbeat: 0
+my_config:
+    address: gossip1
+    port: 80
