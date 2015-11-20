@@ -1,4 +1,5 @@
 from libs.listening_server import ListeningServer
+from libs.gossiper import Gossiper
 from libs.common import get_config_file_name, save_membership
 from libs.constants import INITIAL_CONFIG, BASE_CONFIG_FILE
 import logging
@@ -24,6 +25,20 @@ def create_membership_dict(servers_to_start):
                                        'port': get_port(index)})
     return return_dict
 
+def setup_server(index):
+    logging.error("Starting the {} listening server".format(index))
+    ls = ListeningServer(index, 'localhost', get_port(index))
+    thread = threading.Thread(target=ls.start, args=())
+    thread.daemon = True
+    thread.start()
+
+def setup_gossiper(index):
+    logging.error("Start the {} gossiper".format(index))
+    gossiper = Gossiper(index)
+    thread = threading.Thread(target=gossiper.gossip, args=())
+    thread.daemon = True
+    thread.start()
+
 def main():
     servers_to_start = int(os.getenv("SERVERS_TO_START"))
     logging.error("SERVERS TO START")
@@ -33,11 +48,8 @@ def main():
 
     for index in range(servers_to_start):
         create_base_config_file(index, membership_dict)
-        logging.error("Starting the listening server")
-        ls = ListeningServer(index, 'localhost', get_port(index))
-        thread = threading.Thread(target=ls.start, args=())
-        thread.daemon = True
-        thread.start()
+        setup_server(index)
+        setup_gossiper(index)
 
     while True:
         pass

@@ -24,11 +24,13 @@ class ListeningServer(object):
                 data = from_conn.recv(4096).decode('utf-8')
                 logging.error("GOT DATA")
                 logging.error(data)
-                if data == STRING_TERMINATOR:
-                    break
                 if MEMBERSHIP_STRING in data:
-                    final_data = yaml.load(data.replace(MEMBERSHIP_STRING, ''))
+                    logging.error("Saving data")
+                    final_data = yaml.load(data.replace(MEMBERSHIP_STRING, '').replace(STRING_TERMINATOR, ''))
                     self.update_membership(final_data)
+                if STRING_TERMINATOR in data:
+                    logging.error("Ending connection")
+                    break
 
     def update_membership(self, new_membership_dict):
         logging.error("Updating Membership")
@@ -38,4 +40,6 @@ class ListeningServer(object):
         save_membership(self.config_file, merged_membership_dict)
 
     def merge_membership_dicts(self, current_membership_dict, new_membership_dict):
-        return deepcopy(new_membership_dict)
+        merged_membership = deepcopy(current_membership_dict)
+        merged_membership['members'] = new_membership_dict['members']
+        return merged_membership
