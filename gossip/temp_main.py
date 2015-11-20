@@ -4,6 +4,7 @@ from libs.constants import INITIAL_CONFIG, BASE_CONFIG_FILE
 import logging
 import os
 from copy import deepcopy
+import threading
 
 def get_port(index):
     return index + 80
@@ -34,7 +35,12 @@ def main():
         create_base_config_file(index, membership_dict)
         logging.error("Starting the listening server")
         ls = ListeningServer(index, 'localhost', get_port(index))
-        ls.start()
+        thread = threading.Thread(target=ls.start, args=())
+        thread.daemon = True
+        thread.start()
+
+    while True:
+        pass
 
 if __name__ == '__main__':
     main()
