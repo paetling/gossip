@@ -3,12 +3,16 @@ import random
 import yaml
 import socket
 from .constants import STRING_TERMINATOR, MEMBERSHIP_STRING
-from .common import load_membership, save_membership
+from .common import load_membership, save_membership, get_config_file_name
 
 
 class Gossiper(object):
+    def __init__(self, server_index):
+        self.server_index = server_index
+        self.config_file = get_config_file_name(self.server_index)
+
     def gossip(self):
-        current_membership = load_membership()
+        current_membership = load_membership(self.config_file)
         random_address = self.get_random_peer(current_membership)
         self.gossip_membership(random_address, current_membership)
         success = True
@@ -28,7 +32,7 @@ class Gossiper(object):
         for member in current_membership['members']:
             if random_address[0] == member['address'] and random_address[1] == member['port']:
                 member['heartbeat'] = 0
-        save_membership(current_membership)
+        save_membership(self.config_file, current_membership)
 
     def get_random_peer(self, current_membership):
         current_member_count = len(current_membership['members'])
