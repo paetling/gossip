@@ -16,8 +16,8 @@ class Gossiper(object):
         while True:
             current_membership = load_membership(self.config_file)
             random_address = self.get_random_peer(current_membership)
-            success = self.gossip_about_membership(random_address, current_membership)
-            self.update_heartbeat(random_address, current_membership, success)
+            self.update_heartbeat(random_address, current_membership)
+            self.gossip_about_membership(random_address, current_membership)
             sleep(5)
 
     def gossip_about_membership(self, random_address, current_membership):
@@ -27,29 +27,24 @@ class Gossiper(object):
             s.connect(random_address)
             self.send_string(s, "{}{}".format(MEMBERSHIP_STRING, yaml.dump(current_membership)))
             self.send_string(s, STRING_TERMINATOR)
-            return True
         except Exception as e:
             logging.error("An error occurred: {}".format(e))
-            return False
-
 
     def send_string(self, socket, string):
         socket.send(string.encode('utf-8'))
 
-    def update_heartbeat(self, random_address, current_membership, success):
-        for member in current_membership['members']:
-            if random_address[0] == member['address'] and random_address[1] == member['port']:
-                if success:
-                    member['heartbeat'] = 0
-                else:
-                    member['heartbeat'] = member.get('heartbeat', 0) + 1
+    def update_heartbeat(self, random_address, current_membership):
+        for i, val in enumerate(current_membership['gossip_list']):
+            if i != self.server_index:
+                current_membership['gossip_list'][i] = val + 1
+        logging.error("{} is updating heartbeats to be {}".format(self.server_index, current_membership['gossip_list']))
         save_membership(self.config_file, current_membership)
 
     def members_excluding_self(self, current_membership):
         members = []
         my_port = current_membership['my_config']['port']
         my_address = current_membership['my_config']['address']
-        for member in current_membership['members']:
+        for member in current_membership['servers']:
             if member['port'] != my_port or member['address'] != my_address:
                 members.append(member)
         return members

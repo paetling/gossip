@@ -19,10 +19,15 @@ def create_base_config_file(index, membership):
     save_membership(file_name, full_config)
 
 def create_membership_dict(servers_to_start):
-    return_dict = {'members': []}
+    return_dict = {'servers': [], 'suspect_matrix': [],
+                   'gossip_list': [0] * servers_to_start,
+                   'suspect_list': [0] * servers_to_start}
     for index in range(servers_to_start):
-        return_dict['members'].append({'address': 'localhost',
+        return_dict['servers'].append({'address': 'localhost',
                                        'port': get_port(index)})
+        return_dict['suspect_matrix'].append([0] * servers_to_start)
+    logging.error("IN CREATE MEMBERSHIP DICT")
+    logging.error(return_dict)
     return return_dict
 
 def setup_server(index):

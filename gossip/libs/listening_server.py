@@ -1,9 +1,10 @@
 import socket
 import logging
 from copy import deepcopy
-from .constants import STRING_TERMINATOR, MEMBERSHIP_STRING
+from .constants import STRING_TERMINATOR, MEMBERSHIP_STRING, THRESHOLD
 from .common import load_membership, save_membership, get_config_file_name
 import yaml
+import random
 
 class ListeningServer(object):
     def __init__(self, server_index, address, port):
@@ -17,9 +18,12 @@ class ListeningServer(object):
         s.bind((self.address, self.port))
         s.listen()
         logging.error("Listening on {}".format((self.address, self.port)))
+        if random.randint(0, 15) == 1:
+            logging.error("Killing server {}".format(self.server_index))
+            return
         while True:
             from_conn, from_address = s.accept()
-            logging.error("Got a connection")
+            logging.error("Port {} got a connection from gossiper {}".format(self.port, from_address[1]))
             while True:
                 data = from_conn.recv(4096).decode('utf-8')
                 logging.error("GOT DATA")
@@ -35,11 +39,17 @@ class ListeningServer(object):
     def update_membership(self, new_membership_dict):
         logging.error("Updating Membership")
         current_membership_dict = load_membership(self.config_file)
+        logging.error("Current membership is {}".format(current_membership_dict))
         merged_membership_dict = self.merge_membership_dicts(current_membership_dict, new_membership_dict)
         logging.error("New Membership is {}".format(merged_membership_dict))
         save_membership(self.config_file, merged_membership_dict)
 
     def merge_membership_dicts(self, current_membership_dict, new_membership_dict):
         merged_membership = deepcopy(current_membership_dict)
-        merged_membership['members'] = new_membership_dict['members']
+        for i, item in enumerate(current_membership_dict['gossip_list']):
+            current_less_than_new = current_membership_dict['gossip_list'][i] < new_membership_dict['gossip_list'][i]
+            merged_membership['gossip_list'][i] = current_membership_dict['gossip_list'][i] if current_less_than_new else new_membership_dict['gossip_list'][i]
+            merged_membership['suspect_list'][i] = 1 if merged_membership['gossip_list'][i] > THRESHOLD else 0
+            merged_membership['suspect_matrix'][i] = current_membership_dict['suspect_matrix'][i] if current_less_than_new else new_membership_dict['suspect_matrix'][i]
+        merged_membership['suspect_matrix'][self.server_index] = merged_membership['suspect_list']
         return merged_membership

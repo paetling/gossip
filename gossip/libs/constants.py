@@ -2,6 +2,8 @@ STRING_TERMINATOR = '***END***'
 
 MEMBERSHIP_STRING = '***MEMBERSHIP***'
 
-BASE_CONFIG_FILE = '/.gossip_membership'
+BASE_CONFIG_FILE = 'gossip_membership'
 
 INITIAL_CONFIG = 'initial_config'
+
+THRESHOLD = 20
