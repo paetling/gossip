@@ -1,8 +1,8 @@
 from unittest import TestCase
 from mock import patch, call, Mock
 
-from gossip.libs.listening_server import ListeningServer
-from gossip.libs import listening_server
+from gossip.libs.gossip_server import ListeningServer
+from gossip.libs import gossip_server
 
 class TestListeningServer(TestCase):
     def setUp(self):
@@ -31,21 +31,21 @@ class TestListeningServer(TestCase):
 
     def test_suspects_from_gossip1(self):
         gossip_list = [0, 0, 0, 0]
-        listening_server.THRESHOLD = 3
+        gossip_server.THRESHOLD = 3
         expected_suspects = [0, 0, 0, 0]
 
         self.assertEquals(expected_suspects, self.server.suspects_from_gossip(gossip_list))
 
     def test_suspects_from_gossip2(self):
         gossip_list = [0, 2, 4, 6]
-        listening_server.THRESHOLD = 3
+        gossip_server.THRESHOLD = 3
         expected_suspects = [0, 0, 1, 1]
 
         self.assertEquals(expected_suspects, self.server.suspects_from_gossip(gossip_list))
 
     def test_suspects_from_gossip3(self):
         gossip_list = [0, 2, 4, 6]
-        listening_server.THRESHOLD = 5
+        gossip_server.THRESHOLD = 5
         expected_suspects = [0, 0, 0, 1]
 
         self.assertEquals(expected_suspects, self.server.suspects_from_gossip(gossip_list))
@@ -159,7 +159,7 @@ class TestListeningServer(TestCase):
                           self.server.merge_membership_dicts(current_membership_dict, new_membership_dict))
 
     def test_merge_membership_dicts2(self):
-        listening_server.THRESHOLD = 7
+        gossip_server.THRESHOLD = 7
         current_membership_dict = {'server_configs':{
             'servers': [{'address': 'a', 'port': 'a'},
                         {'address': 'b', 'port': 'b'},
@@ -198,7 +198,7 @@ class TestListeningServer(TestCase):
                           self.server.merge_membership_dicts(current_membership_dict, new_membership_dict))
 
     def test_merge_membership_dicts3(self):
-        listening_server.THRESHOLD = 20
+        gossip_server.THRESHOLD = 20
         current_membership_dict = {'server_configs':{
             'servers': [{'address': 'a', 'port': 'a'},
                         {'address': 'b', 'port': 'b'},
