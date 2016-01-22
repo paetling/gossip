@@ -38,12 +38,54 @@ class ListeningServer(object):
         merged_membership_dict = self.merge_membership_dicts(current_membership_dict, new_membership_dict)
         save_membership(self.config_file_name, merged_membership_dict)
 
+    def merge_gossip_list(self, current_membership_gossip_list, new_membership_gossip_list):
+        merged_gossip_list = []
+        for i, item in enumerate(current_membership_gossip_list):
+            new_gossip_item = new_membership_gossip_list[i]
+            merged_gossip_list.append(min(item, new_gossip_item))
+        return merged_gossip_list
+
+    def suspects_from_gossip(self, gossip_list):
+        suspect_list = []
+        for tick in gossip_list:
+            suspect_list.append(1 if tick > THRESHOLD else 0)
+        return suspect_list
+
+    def create_suspect_matrix(self,
+                              current_membership_gossip,
+                              new_membership_gossip,
+                              current_membership_suspects,
+                              current_membership_matrix,
+                              new_membership_matrix):
+        suspect_matrix = []
+        for i, item in enumerate(current_membership_gossip):
+            new_gossip_item = new_membership_gossip[i]
+            if i == self.server_index:
+                suspect_matrix.append(deepcopy(current_membership_suspects))
+            elif item < new_gossip_item:
+                suspect_matrix.append(deepcopy(current_membership_matrix[i]))
+            else:
+                suspect_matrix.append(deepcopy(new_membership_matrix[i]))
+        return suspect_matrix
+
+
     def merge_membership_dicts(self, current_membership_dict, new_membership_dict):
-        merged_membership = deepcopy(current_membership_dict)
-        for i, item in enumerate(current_membership_dict['gossip_list']):
-            current_less_than_new = current_membership_dict['gossip_list'][i] < new_membership_dict['gossip_list'][i]
-            merged_membership['gossip_list'][i] = current_membership_dict['gossip_list'][i] if current_less_than_new else new_membership_dict['gossip_list'][i]
-            merged_membership['suspect_list'][i] = 1 if merged_membership['gossip_list'][i] > THRESHOLD else 0
-            merged_membership['suspect_matrix'][i] = current_membership_dict['suspect_matrix'][i] if current_less_than_new else new_membership_dict['suspect_matrix'][i]
-        merged_membership['suspect_matrix'][self.server_index] = merged_membership['suspect_list']
-        return merged_membership
+        current_membership_gossip = current_membership_dict['server_configs']['gossip_list']
+        new_membership_gossip = new_membership_dict['server_configs']['gossip_list']
+        merged_gossip_list = self.merge_gossip_list(current_membership_gossip, new_membership_gossip)
+        suspects_list = self.suspects_from_gossip(merged_gossip_list)
+
+        suspect_matrix = self.create_suspect_matrix(current_membership_gossip,
+                                                    new_membership_gossip,
+                                                    suspects_list,
+                                                    current_membership_dict['server_configs']['suspect_matrix'],
+                                                    new_membership_dict['server_configs']['suspect_matrix'])
+
+        merged_membership_dict = {'server_configs':{
+            'servers': deepcopy(current_membership_dict['server_configs']['servers']),
+            'gossip_list': merged_gossip_list,
+            'suspect_list': suspects_list,
+            'suspect_matrix': suspect_matrix
+            }
+        }
+        return merged_membership_dict
