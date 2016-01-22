@@ -40,8 +40,7 @@ class TestGossiper(TestCase):
              'suspect_matrix': [[0, 0, 0],
                                 [0, 0, 0],
                                 [0, 0, 0]]}
-        my_config = {'address': 'a', 'port': 'a'}
-        current_membership = {'server_configs': server_configs, 'my_config': my_config}
+        current_membership = {'server_configs': server_configs}
         gossiper = Gossiper(0)
 
         address, port = gossiper.get_random_peer(current_membership)
@@ -59,8 +58,7 @@ class TestGossiper(TestCase):
              'suspect_matrix': [[0, 0, 0],
                                 [0, 0, 0],
                                 [0, 0, 0]]}
-        my_config = {'address': 'b', 'port': 'b'}
-        current_membership = {'server_configs': server_configs, 'my_config': my_config}
+        current_membership = {'server_configs': server_configs}
         gossiper = Gossiper(1)
 
         address, port = gossiper.get_random_peer(current_membership)
@@ -71,8 +69,7 @@ class TestGossiper(TestCase):
     def test_update_heartbeat1(self, fake_save_membership):
         server_configs ={
              'gossip_list': [0, 0, 0]}
-        my_config = {'address': 'b', 'port': 'b'}
-        current_membership = {'server_configs': server_configs, 'my_config': my_config}
+        current_membership = {'server_configs': server_configs}
         expected_list = [0, 1, 1]
         gossiper = Gossiper(0)
 
@@ -85,8 +82,7 @@ class TestGossiper(TestCase):
     def test_update_heartbeat2(self, fake_save_membership):
         server_configs ={
              'gossip_list': [0, 0, 0]}
-        my_config = {'address': 'b', 'port': 'b'}
-        current_membership = {'server_configs': server_configs, 'my_config': my_config}
+        current_membership = {'server_configs': server_configs}
         expected_list = [1, 0, 1]
         gossiper = Gossiper(1)
 
@@ -99,8 +95,7 @@ class TestGossiper(TestCase):
     def test_update_heartbeat3(self, fake_save_membership):
         server_configs ={
              'gossip_list': [1, 2, 3]}
-        my_config = {'address': 'b', 'port': 'b'}
-        current_membership = {'server_configs': server_configs, 'my_config': my_config}
+        current_membership = {'server_configs': server_configs}
         expected_list = [0, 3, 4]
         gossiper = Gossiper(0)
 
@@ -121,8 +116,7 @@ class TestGossiper(TestCase):
              'suspect_matrix': [[0, 0, 0],
                                 [0, 0, 0],
                                 [0, 0, 0]]}
-        my_config = {'address': 'b', 'port': 'b'}
-        current_membership = {'server_configs': server_configs, 'my_config': my_config}
+        current_membership = {'server_configs': server_configs}
         gossiper = Gossiper(0)
         fake_send_string = Mock()
         gossiper.send_string = fake_send_string
