@@ -3,10 +3,12 @@ import os
 from copy import deepcopy
 import threading
 
-from gossip.libs.listening_server import ListeningServer
-from gossip.libs.gossiper import Gossiper
-from gossip.libs.common import get_config_file_name, save_membership
-from gossip.libs.constants import INITIAL_CONFIG, BASE_CONFIG_FILE, PORT_START
+from libs.listening_server import ListeningServer
+from libs.gossiper import Gossiper
+from libs.common import get_config_file_name, save_membership
+from libs.constants import INITIAL_CONFIG, BASE_CONFIG_FILE, PORT_START
+
+logging.getLogger().setLevel(0)
 
 
 def get_port(index):
@@ -30,17 +32,17 @@ def initial_membership_dict(servers_to_start):
         return_dict['server_configs']['suspect_matrix'].append([0] * servers_to_start)
     return return_dict
 
-def setup_server(index, server_configs):
+def setup_server(index, server_configs, file_lock):
     logging.info("Starting the {} listening server".format(index))
-    ls = ListeningServer(index, server_configs['servers'][index])
-    thread = threading.Thread(target=ls.start, args=())
+    ls = ListeningServer(index, server_configs['server_configs']['servers'][index])
+    thread = threading.Thread(target=ls.start, args=(file_lock,))
     thread.daemon = True
     thread.start()
 
-def setup_gossiper(index):
+def setup_gossiper(index, file_lock):
     logging.info("Start the {} gossiper".format(index))
     gossiper = Gossiper(index)
-    thread = threading.Thread(target=gossiper.gossip, args=())
+    thread = threading.Thread(target=gossiper.gossip, args=(file_lock,))
     thread.daemon = True
     thread.start()
 
@@ -50,9 +52,10 @@ def main():
     server_configs = initial_membership_dict(servers_to_start)
 
     for index in range(servers_to_start):
+        file_lock = threading.Lock()
         create_base_config_file(index, server_configs)
-        setup_server(index, server_configs)
-        setup_gossiper(index)
+        setup_server(index, server_configs, file_lock)
+        setup_gossiper(index, file_lock)
 
     while True:
         pass

@@ -13,11 +13,11 @@ class ListeningServer(object):
         self.port = server_config['port']
         self.config_file_name = get_config_file_name(self.server_index)
 
-    def start(self):
+    def start(self, file_lock):
         s = socket.socket()
         s.bind((self.address, self.port))
         s.listen()
-        logging.int("Listening on {}".format((self.address, self.port)))
+        logging.info("Listening on {}".format((self.address, self.port)))
         while True:
             from_conn, from_address = s.accept()
             logging.info("Port {} got a connection from gossiper {}".format(self.port, from_address[1]))
@@ -26,24 +26,26 @@ class ListeningServer(object):
                 if MEMBERSHIP_STRING in data:
                     logging.info("Merging data")
                     membership_config = self.get_formatted_membership_config(data)
-                    self.update_membership(membership_config)
+                    self.update_membership(membership_config, file_lock)
                 if STRING_TERMINATOR in data:
                     logging.info("Ending connection")
                     break
 
     def read_data(self, conn):
         data = conn.recv(4096).decode('utf-8')
-        logging.info("GOT DATA")
-        logging.info(data)
         return data
 
-    def get_formatted_membership_config(data):
+    def get_formatted_membership_config(self, data):
         return yaml.load(data.replace(MEMBERSHIP_STRING, '').replace(STRING_TERMINATOR, ''))
 
-    def update_membership(self, new_membership_dict):
+    def update_membership(self, new_membership_dict, file_lock):
+        file_lock.acquire(True)
+
         current_membership_dict = load_membership(self.config_file_name)
         merged_membership_dict = self.merge_membership_dicts(current_membership_dict, new_membership_dict)
         save_membership(self.config_file_name, merged_membership_dict)
+
+        file_lock.release()
 
     def merge_gossip_list(self, current_membership_gossip_list, new_membership_gossip_list):
         merged_gossip_list = []

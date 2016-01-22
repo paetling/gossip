@@ -13,19 +13,18 @@ class Gossiper(object):
         self.server_index = server_index
         self.config_file_name = get_config_file_name(self.server_index)
 
-    def gossip(self):
+    def gossip(self, file_lock):
         while True:
-            while True:
-                original_membership = load_membership(self.config_file_name)
-                current_membership = deepcopy(current_membership)
-                self.update_heartbeat(random_address, current_membership)
-                if original_membership == load_membership(self.config_file_name):
-                    self.save_membership(current_membership)
-                    random_address_pair = self.get_random_peer(current_membership)
-                    self.gossip_about_membership(random_address_pair, current_membership)
-                else:
-                    continue
-                break
+            file_lock.acquire(True)
+
+            current_membership = load_membership(self.config_file_name)
+            self.update_heartbeat(current_membership)
+            save_membership(self.config_file_name, current_membership)
+
+            file_lock.release()
+
+            random_address_pair = self.get_random_peer(current_membership)
+            self.gossip_about_membership(random_address_pair, current_membership)
             sleep(5)
 
     def gossip_about_membership(self, random_address_pair, current_membership):

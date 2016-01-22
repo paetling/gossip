@@ -12,7 +12,10 @@ def load_membership(file_name):
         contents = f.read()
         return yaml.load(contents)
 
-def save_membership(file_name, merged_membership_dict):
-    yaml_object = yaml.dump(merged_membership_dict)
+def save_membership(file_name, membership_dict):
+    import logging
+    logging.info("Writing to file {}:".format(file_name))
+    logging.info(membership_dict)
+    yaml_object = yaml.dump(membership_dict)
     with open(file_name, 'w') as f:
         f.write(yaml_object)
