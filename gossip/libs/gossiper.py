@@ -24,6 +24,7 @@ import logging
 import random
 import yaml
 import socket
+from copy import deepcopy
 from .constants import STRING_TERMINATOR, MEMBERSHIP_STRING
 from .common import load_membership, save_membership, get_config_file_name
 from time import sleep
@@ -36,17 +37,24 @@ class Gossiper(object):
 
     def gossip(self):
         while True:
-            current_membership = load_membership(self.config_file_name)
-            self.update_heartbeat(random_address, current_membership)
-            random_address = self.get_random_peer(current_membership)
-            self.gossip_about_membership(random_address, current_membership)
+            while True:
+                original_membership = load_membership(self.config_file_name)
+                current_membership = deepcopy(current_membership)
+                self.update_heartbeat(random_address, current_membership)
+                if original_membership == load_membership(self.config_file_name):
+                    self.save_membership(current_membership)
+                    random_address_pair = self.get_random_peer(current_membership)
+                    self.gossip_about_membership(random_address_pair, current_membership)
+                else:
+                    continue
+                break
             sleep(5)
 
-    def gossip_about_membership(self, random_address, current_membership):
+    def gossip_about_membership(self, random_address_pair, current_membership):
         s = socket.socket()
         try:
-            logging.error('Sending {} to {}'.format(current_membership, random_address))
-            s.connect(random_address)
+            logging.info('Sending {} to {}'.format(current_membership, random_address_pair))
+            s.connect(random_address_pair)
             self.send_string(s, "{}{}".format(MEMBERSHIP_STRING, yaml.dump(current_membership)))
             self.send_string(s, STRING_TERMINATOR)
         except Exception as e:
@@ -61,8 +69,7 @@ class Gossiper(object):
                 current_membership['server_configs']['gossip_list'][i] = val + 1
             else:
                 current_membership['server_configs']['gossip_list'][i] = 0
-        logging.error("{} is updating heartbeats to be {}".format(self.server_index, current_membership['server_configs']['gossip_list']))
-        save_membership(self.config_file_name, current_membership)
+        logging.info("{} is updating heartbeats to be {}".format(self.server_index, current_membership['server_configs']['gossip_list']))
 
     def members_excluding_self(self, current_membership):
         """ Get a list of server indexes excluding index of the current server
