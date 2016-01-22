@@ -22,16 +22,23 @@ class ListeningServer(object):
             from_conn, from_address = s.accept()
             logging.info("Port {} got a connection from gossiper {}".format(self.port, from_address[1]))
             while True:
-                data = from_conn.recv(4096).decode('utf-8')
-                logging.info("GOT DATA")
-                logging.info(data)
+                data = self.read_data(from_conn)
                 if MEMBERSHIP_STRING in data:
-                    logging.info("Saving data")
-                    final_data = yaml.load(data.replace(MEMBERSHIP_STRING, '').replace(STRING_TERMINATOR, ''))
-                    self.update_membership(final_data)
+                    logging.info("Merging data")
+                    membership_config = self.get_formatted_membership_config(data)
+                    self.update_membership(membership_config)
                 if STRING_TERMINATOR in data:
                     logging.info("Ending connection")
                     break
+
+    def read_data(self, conn):
+        data = conn.recv(4096).decode('utf-8')
+        logging.info("GOT DATA")
+        logging.info(data)
+        return data
+
+    def get_formatted_membership_config(data):
+        return yaml.load(data.replace(MEMBERSHIP_STRING, '').replace(STRING_TERMINATOR, ''))
 
     def update_membership(self, new_membership_dict):
         current_membership_dict = load_membership(self.config_file_name)

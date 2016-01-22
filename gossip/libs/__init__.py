@@ -15,5 +15,5 @@ Server configs document looks like the following dictionary:
                   (it is an aggregation of all servers suspect list)
 NOTE: All lists should be the exact same length
 
-{'current_membership': {'server_configs': server_configs}
+{'server_configs': server_configs}
 """

@@ -7,3 +7,5 @@ BASE_CONFIG_FILE = '/gossip_membership'
 INITIAL_CONFIG = 'initial_config'
 
 THRESHOLD = 20
+
+PORT_START = 80
