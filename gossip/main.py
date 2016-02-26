@@ -97,12 +97,21 @@ def get_live_config():
         if process is not None:
             return load_membership(get_config_file_name(i))
 
+def list_state(socket):
+    current_config = get_live_config()
+    socket.send('Current State of world as seen by server 1:\n'.encode('utf-8'))
+    socket.send('GOSSIP LIST\n'.encode('utf-8'))
+    socket.send(str(current_config['server_configs']['gossip_list']).encode('utf-8'))
+    socket.send('\n'.encode('utf-8'))
+    socket.send('SUSPECT LIST\n'.encode('utf-8'))
+    socket.send(str(current_config['server_configs']['suspect_list']).encode('utf-8'))
+    socket.send('\n'.encode('utf-8'))
+
 def run_command_from_client(data, server_configs, socket):
     arguments = yaml.load(data.replace(COMMAND_STRING, '').replace(STRING_TERMINATOR, '')).split(' ')
     logging.info('ARGUMENTS: {}'.format(arguments))
     if arguments[0] == 'LIST':
-        socket.send('Current State of world as seen by server 1:\n'.encode('utf-8'))
-        socket.send(str(get_live_config()).encode('utf-8'))
+        list_state(socket)
         socket.send(STRING_TERMINATOR.encode('utf-8'))
     elif arguments[0] == 'ENSURE':
         setup_gossip_for_index(int(arguments[1]))
