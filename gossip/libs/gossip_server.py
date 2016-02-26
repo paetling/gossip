@@ -1,5 +1,6 @@
 import socket
 import logging
+import sys
 from copy import deepcopy
 from .constants import STRING_TERMINATOR, MEMBERSHIP_STRING, THRESHOLD
 from .common import load_membership, save_membership, get_config_file_name
@@ -49,9 +50,11 @@ class ListeningServer(object):
 
     def merge_gossip_list(self, current_membership_gossip_list, new_membership_gossip_list):
         merged_gossip_list = []
-        for i, item in enumerate(current_membership_gossip_list):
-            new_gossip_item = new_membership_gossip_list[i]
-            merged_gossip_list.append(min(item, new_gossip_item))
+        max_length = max(len(current_membership_gossip_list), len(new_membership_gossip_list))
+        for i in range(max_length):
+            current_item = current_membership_gossip_list[i] if len(current_membership_gossip_list) > i else sys.maxsize
+            new_gossip_item = new_membership_gossip_list[i] if len(new_membership_gossip_list) > i else sys.maxsize
+            merged_gossip_list.append(min(current_item, new_gossip_item))
         return merged_gossip_list
 
     def suspects_from_gossip(self, gossip_list):
@@ -60,6 +63,13 @@ class ListeningServer(object):
             suspect_list.append(1 if tick > THRESHOLD else 0)
         return suspect_list
 
+    @staticmethod
+    def merged_membership_suspects(current_membership_suspects, new_membership_suspects):
+        additional_suspects = []
+        if len(new_membership_suspects) > len(current_membership_suspects):
+            additional_suspects = new_membership_suspects[len(current_membership_suspects):]
+        return current_membership_suspects + additional_suspects
+
     def create_suspect_matrix(self,
                               current_membership_gossip,
                               new_membership_gossip,
@@ -67,16 +77,23 @@ class ListeningServer(object):
                               current_membership_matrix,
                               new_membership_matrix):
         suspect_matrix = []
-        for i, item in enumerate(current_membership_gossip):
-            new_gossip_item = new_membership_gossip[i]
+        max_length = max(len(current_membership_gossip), len(new_membership_gossip))
+        for i in range(max_length):
+            current_item = current_membership_gossip[i] if len(current_membership_gossip) > i else sys.maxsize
+            new_gossip_item = new_membership_gossip[i] if len(new_membership_gossip) > i else sys.maxsize
+            current_row = current_membership_matrix[i] if len(current_membership_gossip) > i else [sys.maxsize] * max_length
+            new_row = new_membership_matrix[i] if len(new_membership_gossip) > i else [sys.maxsize] * max_length
             if i == self.server_index:
-                suspect_matrix.append(deepcopy(current_membership_suspects))
-            elif item < new_gossip_item:
-                suspect_matrix.append(deepcopy(current_membership_matrix[i]))
+                suspect_matrix.append(self.merged_membership_suspects(current_membership_suspects, new_row))
+            elif current_item < new_gossip_item:
+                suspect_matrix.append(self.merged_membership_suspects(current_row, new_row))
             else:
-                suspect_matrix.append(deepcopy(new_membership_matrix[i]))
+                suspect_matrix.append(self.merged_membership_suspects(new_row, current_row))
         return suspect_matrix
 
+    @staticmethod
+    def merge_servers(current_servers, new_servers):
+        return deepcopy(current_servers) if len(current_servers) > len(new_servers) else deepcopy(new_servers)
 
     def merge_membership_dicts(self, current_membership_dict, new_membership_dict):
         current_membership_gossip = current_membership_dict['server_configs']['gossip_list']
@@ -91,7 +108,8 @@ class ListeningServer(object):
                                                     new_membership_dict['server_configs']['suspect_matrix'])
 
         merged_membership_dict = {'server_configs':{
-            'servers': deepcopy(current_membership_dict['server_configs']['servers']),
+            'servers': self.merge_servers(current_membership_dict['server_configs']['servers'],
+                                          new_membership_dict['server_configs']['servers']),
             'gossip_list': merged_gossip_list,
             'suspect_list': suspects_list,
             'suspect_matrix': suspect_matrix
