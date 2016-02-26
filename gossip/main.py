@@ -96,8 +96,7 @@ def main():
     server_configs = initial_membership_dict(servers_to_start)
 
     for index in range(servers_to_start):
-        if index not in [0, 2]:
-            setup_gossip_for_index(index, server_configs)
+        setup_gossip_for_index(index, server_configs)
 
     while True:
         s = socket.socket()
