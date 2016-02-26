@@ -54,8 +54,25 @@ def setup_gossiper(index, file_lock):
     process.start()
     return process
 
-def setup_gossip_for_index(index, server_configs):
+def ensure_config_large_enough(index, server_configs):
+    current_configs = deepcopy(server_configs)
+    current_length = len(current_configs['server_configs']['servers'])
+    if index >= current_length:
+        extra_length = index + 1 - current_length
+        current_configs['server_configs']['servers'] += [{'address': 'localhost', 'port': get_port(current_length + i)} for i in range(extra_length)]
+        current_configs['server_configs']['gossip_list'] += [0]*extra_length
+        current_configs['server_configs']['suspect_list'] += [0]*extra_length
+        current_configs['server_configs']['suspect_matrix'] += [[0]*current_length for _ in range(extra_length)]
+        for i in range(len(current_configs['server_configs']['suspect_matrix'])):
+            current_configs['server_configs']['suspect_matrix'][i] += [0]*extra_length
+
+    return current_configs
+
+def setup_gossip_for_index(index, server_configs=None):
     logging.info("SETTING UP SERVER {}".format(index))
+    if server_configs is None:
+        server_configs = get_live_config()
+        server_configs = ensure_config_large_enough(index, server_configs)
     file_lock = multiprocessing.Lock()
     create_base_config_file(index, server_configs)
     servers[index] = setup_server(index, server_configs, file_lock)
@@ -75,15 +92,20 @@ def read_data(conn):
     data = conn.recv(4096).decode('utf-8')
     return data
 
+def get_live_config():
+    for i, process in enumerate(servers):
+        if process is not None:
+            return load_membership(get_config_file_name(i))
+
 def run_command_from_client(data, server_configs, socket):
     arguments = yaml.load(data.replace(COMMAND_STRING, '').replace(STRING_TERMINATOR, '')).split(' ')
     logging.info('ARGUMENTS: {}'.format(arguments))
     if arguments[0] == 'LIST':
         socket.send('Current State of world as seen by server 1:\n'.encode('utf-8'))
-        socket.send(str(load_membership(get_config_file_name(1))).encode('utf-8'))
+        socket.send(str(get_live_config()).encode('utf-8'))
         socket.send(STRING_TERMINATOR.encode('utf-8'))
     elif arguments[0] == 'ENSURE':
-        setup_gossip_for_index(int(arguments[1]), server_configs)
+        setup_gossip_for_index(int(arguments[1]))
         socket.send(STRING_TERMINATOR.encode('utf-8'))
     elif arguments[0] == 'KILL':
         kill_index(int(arguments[1]))
