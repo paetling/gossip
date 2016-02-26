@@ -1,7 +1,7 @@
 import logging
 import os
 from copy import deepcopy
-import threading
+import multiprocessing
 import socket
 import sys
 import yaml
@@ -13,6 +13,8 @@ from libs.constants import (INITIAL_CONFIG, BASE_CONFIG_FILE, PORT_START,
                             MAIN_ADDRESS, MAIN_PORT, COMMAND_STRING, STRING_TERMINATOR)
 
 logging.getLogger().setLevel(0)
+servers = [None]*1000
+gossipers = [None]*1000
 
 
 def get_port(index):
@@ -39,38 +41,53 @@ def initial_membership_dict(servers_to_start):
 def setup_server(index, server_configs, file_lock):
     logging.info("Starting the {} listening server".format(index))
     ls = ListeningServer(index, server_configs['server_configs']['servers'][index])
-    thread = threading.Thread(target=ls.start, args=(file_lock,))
-    thread.daemon = True
-    thread.start()
+    process = multiprocessing.Process(target=ls.start, args=(file_lock,))
+    process.daemon = True
+    process.start()
+    return process
 
 def setup_gossiper(index, file_lock):
     logging.info("Start the {} gossiper".format(index))
     gossiper = Gossiper(index)
-    thread = threading.Thread(target=gossiper.gossip, args=(file_lock,))
-    thread.daemon = True
-    thread.start()
+    process = multiprocessing.Process(target=gossiper.gossip, args=(file_lock,))
+    process.daemon = True
+    process.start()
+    return process
 
 def setup_gossip_for_index(index, server_configs):
     logging.info("SETTING UP SERVER {}".format(index))
-    file_lock = threading.Lock()
+    file_lock = multiprocessing.Lock()
     create_base_config_file(index, server_configs)
-    setup_server(index, server_configs, file_lock)
-    setup_gossiper(index, file_lock)
+    servers[index] = setup_server(index, server_configs, file_lock)
+    gossipers[index] = setup_gossiper(index, file_lock)
+
+def kill_index(index):
+    logging.info("KILLING SERVER {}".format(index))
+    server = servers[index]
+    servers[index] = None
+    gossiper = gossipers[index]
+    gossipers[index] = None
+
+    server.terminate()
+    gossiper.terminate()
 
 def read_data(conn):
     data = conn.recv(4096).decode('utf-8')
     return data
 
-def run_command_from_client(data, server_configs):
+def run_command_from_client(data, server_configs, socket):
     arguments = yaml.load(data.replace(COMMAND_STRING, '').replace(STRING_TERMINATOR, '')).split(' ')
     logging.info('ARGUMENTS: {}'.format(arguments))
     if arguments[0] == 'LIST':
-        logging.info('Current State of world as seen by server 1:')
-        logging.info(load_membership(get_config_file_name(1)))
+        socket.send('Current State of world as seen by server 1:\n'.encode('utf-8'))
+        socket.send(str(load_membership(get_config_file_name(1))).encode('utf-8'))
+        socket.send(STRING_TERMINATOR.encode('utf-8'))
     elif arguments[0] == 'ENSURE':
         setup_gossip_for_index(int(arguments[1]), server_configs)
+        socket.send(STRING_TERMINATOR.encode('utf-8'))
     elif arguments[0] == 'KILL':
         kill_index(int(arguments[1]))
+        socket.send(STRING_TERMINATOR.encode('utf-8'))
 
 
 def main():
@@ -83,18 +100,17 @@ def main():
             setup_gossip_for_index(index, server_configs)
 
     while True:
-        pass
         s = socket.socket()
         s.bind((MAIN_ADDRESS, MAIN_PORT))
         s.listen()
         logging.info("Starting up MAIN server on {}".format((MAIN_ADDRESS, MAIN_PORT)))
         while True:
             from_conn, from_address = s.accept()
-            logging.info("MAIN got a connection from gossiper {}".format(from_address[1]))
+            logging.info("MAIN got a connection from client {}".format(from_address[1]))
             while True:
                 data = read_data(from_conn)
                 if COMMAND_STRING in data:
-                    run_command_from_client(data, server_configs)
+                    run_command_from_client(data, server_configs, from_conn)
                 if STRING_TERMINATOR in data:
                     logging.info("Ending connection")
                     break
