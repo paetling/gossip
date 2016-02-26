@@ -25,7 +25,7 @@ class Gossiper(object):
 
             random_address_pair = self.get_random_peer(current_membership)
             self.gossip_about_membership(random_address_pair, current_membership)
-            sleep(5)
+            sleep(.1)
 
     def gossip_about_membership(self, random_address_pair, current_membership):
         s = socket.socket()

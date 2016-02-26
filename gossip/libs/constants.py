@@ -2,6 +2,8 @@ STRING_TERMINATOR = '***END***'
 
 MEMBERSHIP_STRING = '***MEMBERSHIP***'
 
+COMMAND_STRING = '***COMMAND***'
+
 BASE_CONFIG_FILE = '/gossip_membership'
 
 INITIAL_CONFIG = 'initial_config'
@@ -9,3 +11,6 @@ INITIAL_CONFIG = 'initial_config'
 THRESHOLD = 20
 
 PORT_START = 80
+
+MAIN_ADDRESS = 'localhost'
+MAIN_PORT = 5000
